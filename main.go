@@ -83,10 +83,6 @@ func getNextId() int {
 	return highestId + 1
 }
 
-type fooHandler struct {
-	Message string
-}
-
 func productsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -124,23 +120,7 @@ func productsHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (f *fooHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write([]byte(f.Message))
-	if err != nil {
-		return
-	}
-}
-
-func barHandler(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write([]byte("bar called"))
-	if err != nil {
-		return
-	}
-}
-
 func main() {
-	http.Handle("/foo", &fooHandler{Message: "foo called"})
-	http.HandleFunc("/bar", barHandler)
 	http.HandleFunc("/products", productsHandler)
 	err := http.ListenAndServe(":9090", nil)
 	if err != nil {
