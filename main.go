@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Product struct {
@@ -182,9 +184,22 @@ func productsHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func middlewareHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Before handler; middleware start")
+		start := time.Now()
+		handler.ServeHTTP(w, r)
+		fmt.Printf("middleware finished; %v", time.Since(start))
+	})
+}
+
 func main() {
-	http.HandleFunc("/products", productsHandler)
-	http.HandleFunc("/product/", productHandler)
+	productListHandler := http.HandlerFunc(productsHandler)
+	productItemHandler := http.HandlerFunc(productHandler)
+
+	http.Handle("/products", middlewareHandler(productListHandler))
+	http.Handle("/product/", middlewareHandler(productItemHandler))
+
 	err := http.ListenAndServe(":9090", nil)
 	if err != nil {
 		return
