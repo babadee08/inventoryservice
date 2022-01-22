@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/babadee08/inventoryservice/cors"
+	"golang.org/x/net/websocket"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -16,6 +17,7 @@ func SetupRoutes(apiBasePath string) {
 	handleProducts := http.HandlerFunc(productsHandler)
 	handleProduct := http.HandlerFunc(productHandler)
 
+	http.Handle("/websocket", websocket.Handler(productSocket))
 	http.Handle(fmt.Sprintf("%v/%v", apiBasePath, productBasePath), cors.MiddlewareHandler(handleProducts))
 	http.Handle(fmt.Sprintf("%v/%v/", apiBasePath, productBasePath), cors.MiddlewareHandler(handleProduct))
 }
