@@ -1,8 +1,10 @@
 package product
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/babadee08/inventoryservice/database"
 	"io/ioutil"
 	"log"
 	"os"
@@ -45,13 +47,34 @@ func loadProductMap() (map[int]Product, error) {
 	return prodMap, nil
 }
 
-func getProduct(productId int) *Product {
-	productMap.RLock()
+func getProduct(productId int) (*Product, error) {
+	row := database.DbConn.QueryRow(`SELECT productId, 
+       manufacturer, 
+       sku, 
+       upc, 
+       pricePerUnit, 
+       quantityOnHand, 
+       productName FROM products WHERE productId = ?`, productId)
+	product := &Product{}
+	err := row.Scan(&product.ProductId,
+		&product.Manufacturer,
+		&product.Sku,
+		&product.Upc,
+		&product.PricePerUnit,
+		&product.QuantityOnHand,
+		&product.ProductName)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return product, nil
+	/*productMap.RLock()
 	defer productMap.RUnlock()
 	if product, ok := productMap.m[productId]; ok {
 		return &product
 	}
-	return nil
+	return nil*/
 }
 
 func removeProduct(productId int) {
@@ -60,14 +83,46 @@ func removeProduct(productId int) {
 	delete(productMap.m, productId)
 }
 
-func getProductList() []Product {
-	productMap.RLock()
+func getProductList() ([]Product, error) {
+	results, err := database.DbConn.Query(`SELECT productId, 
+       manufacturer, 
+       sku, 
+       upc, 
+       pricePerUnit, 
+       quantityOnHand, 
+       productName FROM products`)
+	if err != nil {
+		return nil, err
+	}
+	defer func(results *sql.Rows) {
+		err := results.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(results)
+	products := make([]Product, 0)
+	for results.Next() {
+		var product Product
+		err := results.Scan(&product.ProductId,
+			&product.Manufacturer,
+			&product.Sku,
+			&product.Upc,
+			&product.PricePerUnit,
+			&product.QuantityOnHand,
+			&product.ProductName)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, product)
+	}
+	return products, nil
+	/*productMap.RLock()
 	products := make([]Product, 0, len(productMap.m))
 	for _, value := range productMap.m {
 		products = append(products, value)
 	}
 	productMap.RUnlock()
-	return products
+	return products*/
 }
 
 func getProductIds() []int {
@@ -89,7 +144,7 @@ func getNextProductId() int {
 func addOrUpdateProduct(product Product) (int, error) {
 	addOrUpdateID := -1
 	if product.ProductId > 0 {
-		oldProduct := getProduct(product.ProductId)
+		oldProduct, _ := getProduct(product.ProductId)
 		if oldProduct == nil {
 			return 0, fmt.Errorf("product id [%v] doesn't exist", product.ProductId)
 		}

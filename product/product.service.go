@@ -23,7 +23,11 @@ func SetupRoutes(apiBasePath string) {
 func productsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		productList := getProductList()
+		productList, err := getProductList()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		productsJson, err := json.Marshal(productList)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -69,7 +73,11 @@ func productHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	product := getProduct(productID)
+	product, err := getProduct(productID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	if product == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
