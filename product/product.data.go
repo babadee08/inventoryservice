@@ -77,10 +77,15 @@ func getProduct(productId int) (*Product, error) {
 	return nil*/
 }
 
-func removeProduct(productId int) {
-	productMap.Lock()
+func removeProduct(productId int) error {
+	_, err := database.DbConn.Query(`DELETE FROM products WHERE productId = ?`, productId)
+	if err != nil {
+		return err
+	}
+	return nil
+	/*productMap.Lock()
 	defer productMap.Unlock()
-	delete(productMap.m, productId)
+	delete(productMap.m, productId)*/
 }
 
 func getProductList() ([]Product, error) {
@@ -139,6 +144,53 @@ func getProductIds() []int {
 func getNextProductId() int {
 	productIds := getProductIds()
 	return productIds[len(productIds)-1] + 1
+}
+
+func updateProduct(product Product) error {
+	_, err := database.DbConn.Exec(`UPDATE products SET 
+ 	manufacturer=?,
+ 	sku=?,
+ 	upc=?,
+ 	pricePerUnit=CAST(? AS DECIMAL(13,2)),
+ 	quantityOnHand=?,
+ 	productName=? WHERE productId=?`,
+		product.Manufacturer,
+		product.Sku,
+		product.Upc,
+		product.PricePerUnit,
+		product.QuantityOnHand,
+		product.ProductName,
+		product.ProductId,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func insertProduct(product Product) (int, error) {
+	result, err := database.DbConn.Exec(`INSERT INTO products 
+ 	(manufacturer,
+ 	sku,
+ 	upc,
+ 	pricePerUnit,
+ 	quantityOnHand,
+ 	productName) VALUES (?, ?, ?, ?, ?, ?)`,
+		product.Manufacturer,
+		product.Sku,
+		product.Upc,
+		product.PricePerUnit,
+		product.QuantityOnHand,
+		product.ProductName,
+	)
+	if err != nil {
+		return 0, err
+	}
+	insertId, err := result.LastInsertId()
+	if err != nil {
+		return 0, nil
+	}
+	return int(insertId), nil
 }
 
 func addOrUpdateProduct(product Product) (int, error) {
